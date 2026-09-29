@@ -1,1 +1,1201 @@
+1. What is a Sealed Class?
+-A sealed class is a class that cannot be inherited by another class.
+-Example
+sealed class PaymentService
+{
+    public void Pay()
+    {
+        Console.WriteLine("Payment Done");
+    }
+}
 
+// ❌ Not allowed
+class OnlinePayment : PaymentService
+{
+}
+-> Why use it?
+-Prevent inheritance.
+-Prevent modification of class behavior through inheritance.
+-Can communicate that a class is not designed to be extended.
+->Interview Answer
+-A sealed class is a class that cannot be inherited. We use it when we want to prevent further inheritance or extension of a class.
+
+2. What are Access Modifiers in C#?
+Access modifiers control where a class, method, property, or variable can be accessed.
+Modifier	-    Accessibility
+public	       Anywhere
+private	       Only inside the same class
+protected    	Same class + derived class
+internal	    Same assembly/project
+protected     internal	Same assembly OR derived class
+private       protected	Same assembly AND derived class
+-Example
+class Employee
+{
+    public string Name;
+    private int salary;
+
+    protected void CalculateSalary()
+    {
+    }
+}
+
+->Interview Tip
+-The most commonly asked:
+private → class only
+protected → class + child class
+internal → same assembly
+public → everywhere
+
+3. What is Dependency Injection? Why do we use it?
+-Dependency Injection (DI) is a design pattern where a class receives its dependencies from outside instead of creating them itself.
+->Without DI
+class OrderService
+{
+    private PaymentService payment = new PaymentService();
+}
+-Here OrderService is tightly coupled to PaymentService.
+
+->With DI
+class OrderService
+{
+    private readonly IPaymentService _paymentService;
+
+    public OrderService(IPaymentService paymentService)
+    {
+        _paymentService = paymentService;
+    }
+}
+
+Register:
+
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+Why DI?
+Loose coupling
+Easier unit testing
+Easier replacement of implementations
+Better maintainability
+Supports SOLID principles, especially Dependency Inversion Principle
+Interview Answer
+
+Dependency Injection means providing an object's dependencies from outside rather than creating them inside the class. It reduces tight coupling and makes applications easier to test and maintain.
+
+4. What is Middleware?
+
+Middleware is a component in the ASP.NET Core request pipeline that processes HTTP requests and responses.
+
+Client
+   ↓
+Middleware 1
+   ↓
+Middleware 2
+   ↓
+Middleware 3
+   ↓
+Controller
+   ↓
+Response
+Example
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers();
+
+Custom middleware:
+
+app.Use(async (context, next) =>
+{
+    Console.WriteLine("Before");
+
+    await next();
+
+    Console.WriteLine("After");
+});
+Common Middleware
+Authentication
+Authorization
+Exception handling
+CORS
+Logging
+HTTPS redirection
+Static files
+Interview Point
+
+Middleware works at the HTTP request/response pipeline level.
+
+5. What is Routing?
+
+Routing determines which endpoint/controller/action should handle an incoming HTTP request.
+
+Example:
+
+GET /api/products/10
+
+can map to:
+
+[HttpGet("{id}")]
+public IActionResult GetProduct(int id)
+{
+}
+Attribute Routing
+[Route("api/products")]
+public class ProductController : ControllerBase
+{
+    [HttpGet("{id}")]
+    public IActionResult Get(int id)
+    {
+        return Ok();
+    }
+}
+Conventional Routing
+{controller}/{action}/{id?}
+
+Example:
+
+/Product/Get/10
+Interview Answer
+
+Routing maps an incoming URL and HTTP method to a specific controller action or endpoint.
+
+6. What are Filters?
+
+Filters are components in ASP.NET Core MVC that allow us to execute code at specific stages of request processing.
+
+Common filters:
+
+Authorization Filter
+Resource Filter
+Action Filter
+Exception Filter
+Result Filter
+Example
+public class LogActionFilter : IActionFilter
+{
+    public void OnActionExecuting(ActionExecutingContext context)
+    {
+        Console.WriteLine("Before action");
+    }
+
+    public void OnActionExecuted(ActionExecutedContext context)
+    {
+        Console.WriteLine("After action");
+    }
+}
+Middleware vs Filter
+Middleware	Filter
+HTTP pipeline	MVC pipeline
+Works for all requests	Mostly MVC/controller actions
+Authentication, logging, CORS etc.	Action-level concerns
+Runs before MVC	Runs around controller/action execution
+7. What is an Action Filter?
+
+An Action Filter executes code before and/or after a controller action.
+
+Example:
+
+public class LoggingFilter : IActionFilter
+{
+    public void OnActionExecuting(ActionExecutingContext context)
+    {
+        Console.WriteLine("Action started");
+    }
+
+    public void OnActionExecuted(ActionExecutedContext context)
+    {
+        Console.WriteLine("Action completed");
+    }
+}
+
+Register:
+
+builder.Services.AddControllers(options =>
+{
+    options.Filters.Add<LoggingFilter>();
+});
+Use Cases
+Logging
+Validation
+Auditing
+Measuring execution time
+Common action-level logic
+8. How do you handle Global Exception Handling?
+
+Instead of putting:
+
+try
+{
+}
+catch(Exception ex)
+{
+}
+
+inside every controller, we can handle exceptions globally.
+
+Using built-in middleware
+if (!app.Environment.IsDevelopment())
+{
+    app.UseExceptionHandler("/error");
+}
+
+For APIs, we can also create custom exception middleware.
+
+app.UseMiddleware<ExceptionMiddleware>();
+
+Example:
+
+public async Task InvokeAsync(HttpContext context)
+{
+    try
+    {
+        await _next(context);
+    }
+    catch (Exception ex)
+    {
+        context.Response.StatusCode = 500;
+
+        await context.Response.WriteAsJsonAsync(new
+        {
+            message = "Something went wrong"
+        });
+    }
+}
+Interview Answer
+
+I prefer centralized exception handling using ASP.NET Core exception-handling middleware so that controllers remain clean and errors can be logged and returned in a consistent format.
+
+9. What is async/await? Why is it used?
+
+async and await are used for asynchronous programming.
+
+They allow a thread to avoid waiting/blocking while an I/O operation is running.
+
+Example:
+
+public async Task<Product> GetProduct()
+{
+    return await _context.Products.FirstOrDefaultAsync();
+}
+
+Instead of:
+
+var product = _context.Products.FirstOrDefault();
+Common use cases
+Database calls
+API calls
+File operations
+Network operations
+Important
+
+async/await does not automatically mean creating a new thread.
+
+For I/O operations, it allows the thread to be released while waiting.
+
+10. Difference Between Task and Thread
+Thread	Task
+Actual execution thread	Represents asynchronous work
+More expensive	Lightweight
+Manually manages thread	Usually uses ThreadPool
+Low-level	Higher-level abstraction
+Thread.Sleep()	await Task.Delay()
+Thread
+Thread thread = new Thread(() =>
+{
+    Console.WriteLine("Running");
+});
+
+thread.Start();
+Task
+Task.Run(() =>
+{
+    Console.WriteLine("Running");
+});
+Interview Answer
+
+Thread is an actual execution thread managed by the OS/runtime, while Task is a higher-level abstraction representing asynchronous work. Tasks are generally preferred for modern .NET asynchronous programming.
+
+11. IEnumerable vs IQueryable
+
+This is very important for EF Core interviews.
+
+IEnumerable
+
+Works mainly with data that is already in memory.
+
+IEnumerable<Product> products =
+    context.Products.ToList();
+
+var result = products.Where(x => x.Price > 100);
+
+The filtering happens in memory.
+
+IQueryable
+
+Builds a query that can be translated and executed by the database provider.
+
+IQueryable<Product> products =
+    context.Products;
+
+var result = products
+    .Where(x => x.Price > 100)
+    .ToList();
+
+The filtering can become SQL:
+
+SELECT *
+FROM Products
+WHERE Price > 100;
+Main Difference
+IEnumerable
+    ↓
+Data comes to application
+    ↓
+Filtering in memory
+
+IQueryable
+    ↓
+Query sent to database
+    ↓
+Database performs filtering
+Interview Point
+
+IQueryable is generally useful with EF Core when we want filtering, sorting, projection etc. to be executed by the database rather than loading unnecessary data into memory.
+
+12. Value Type vs Reference Type
+Value Type
+
+Stores the actual value.
+
+Examples:
+
+int
+double
+bool
+struct
+enum
+int a = 10;
+int b = a;
+
+b = 20;
+
+Console.WriteLine(a); // 10
+Reference Type
+
+Stores a reference to an object.
+
+Examples:
+
+class
+string
+array
+object
+delegate
+Person p1 = new Person();
+p1.Name = "Aman";
+
+Person p2 = p1;
+
+p2.Name = "Rahul";
+
+Console.WriteLine(p1.Name); // Rahul
+
+Because both refer to the same object.
+
+13. Struct vs Class
+Struct	Class
+Value type	Reference type
+Usually used for small data	Used for complex objects
+Cannot inherit from another struct/class	Supports inheritance
+Cannot have parameterless custom constructor in older C# versions	Supports constructors
+Assignment copies value	Assignment copies reference
+
+Example:
+
+struct Point
+{
+    public int X;
+    public int Y;
+}
+class Employee
+{
+    public string Name;
+}
+Interview Tip
+
+Use a struct when the type represents a small value-like piece of data. Use a class for objects with identity, behavior, or more complex state.
+
+14. What are Extension Methods?
+
+Extension methods allow us to add methods to an existing type without modifying or inheriting from it.
+
+Example
+public static class StringExtensions
+{
+    public static bool IsLong(this string value)
+    {
+        return value.Length > 10;
+    }
+}
+
+Usage:
+
+string name = "AmanUpadhyay";
+
+bool result = name.IsLong();
+
+The important part is:
+
+this string value
+Rules
+Class must be static
+Method must be static
+First parameter uses this
+15. Explain JWT Authentication. Where is the Token Stored?
+
+JWT = JSON Web Token.
+
+Typical flow:
+
+Client
+   ↓
+Login credentials
+   ↓
+Server
+   ↓
+Validate user
+   ↓
+Generate JWT
+   ↓
+Client
+
+Then client sends:
+
+Authorization: Bearer <token>
+JWT Structure
+Header.Payload.Signature
+
+Example:
+
+xxxxx.yyyyy.zzzzz
+Server
+
+ASP.NET Core validates:
+
+Signature
+Expiration
+Issuer
+Audience
+Where is JWT stored?
+
+It depends on the application.
+
+For browser applications, common approaches include:
+
+Secure, HttpOnly, SameSite cookies
+In-memory application state
+Browser storage such as localStorage is possible but exposes the token to JavaScript, so an XSS vulnerability can make it risky.
+Interview Answer
+
+JWT is a stateless authentication mechanism where the server issues a signed token after successful login. The client sends the token with subsequent requests, commonly using the Authorization Bearer header or a secure HttpOnly cookie.
+
+16. Why is DbContext Registered as Scoped?
+
+Usually:
+
+builder.Services.AddDbContext<AppDbContext>(
+    options => ...
+);
+
+AddDbContext() registers DbContext as Scoped by default.
+
+That means:
+
+HTTP Request
+     ↓
+One DbContext
+     ↓
+Repositories/Services
+     ↓
+HTTP Response
+
+Each request gets its own DbContext instance.
+
+Why Scoped?
+
+DbContext:
+
+Is not thread-safe
+Represents a unit of work
+Tracks entity changes
+Should generally be short-lived
+Interview Answer
+
+DbContext is normally scoped because we want one context per HTTP request/unit of work, while avoiding sharing the same DbContext across concurrent requests.
+
+17. Explain Your Project Architecture
+
+For a typical ASP.NET Core project, you can explain it like:
+
+Client
+  ↓
+Controller
+  ↓
+Service
+  ↓
+Repository
+  ↓
+DbContext
+  ↓
+Database
+Controller
+
+Handles HTTP requests.
+
+[HttpGet]
+public async Task<IActionResult> GetProducts()
+{
+    return Ok(await _productService.GetProducts());
+}
+Service
+
+Contains business logic.
+
+public async Task<List<Product>> GetProducts()
+{
+    return await _repository.GetProducts();
+}
+Repository
+
+Handles database operations.
+
+public async Task<List<Product>> GetProducts()
+{
+    return await _context.Products.ToListAsync();
+}
+DbContext
+
+Communicates with database through EF Core.
+
+DTO
+
+Controls what data enters/leaves the API.
+
+public class ProductDto
+{
+    public string Name { get; set; }
+    public decimal Price { get; set; }
+}
+Interview Answer
+
+In my application, the controller handles HTTP concerns, the service layer contains business logic, the repository handles data access, EF Core DbContext communicates with the database, and DTOs control the data exposed through APIs.
+
+18. What is Code First? Can we create database tables without SQL scripts?
+
+Yes.
+
+In EF Core Code First, we define our database structure using C# classes and DbContext, and EF Core generates the database schema through migrations.
+
+Entity:
+
+public class Product
+{
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public decimal Price { get; set; }
+}
+
+DbContext:
+
+public DbSet<Product> Products { get; set; }
+
+Migration:
+
+dotnet ef migrations add InitialCreate
+
+Apply:
+
+dotnet ef database update
+
+EF Core generates the SQL required to create/update the database.
+
+Flow
+C# Entity
+   ↓
+DbContext
+   ↓
+Migration
+   ↓
+SQL generated by EF Core
+   ↓
+Database
+19. PUT vs PATCH
+PUT
+
+Used to replace/update the complete resource.
+
+PUT /api/products/10
+{
+    "name": "Laptop",
+    "price": 50000,
+    "category": "Electronics"
+}
+PATCH
+
+Used for partial updates.
+
+PATCH /api/products/10
+{
+    "price": 55000
+}
+Easy way to remember
+PUT   → Complete update/replacement
+PATCH → Partial update
+20. Why do we use POST instead of GET?
+
+GET is primarily used to retrieve data.
+
+POST is generally used to create resources or submit data for processing.
+
+Example:
+
+GET /api/products
+
+Get products.
+
+POST /api/products
+
+Create product.
+
+{
+    "name": "Laptop",
+    "price": 50000
+}
+Why not GET for creating?
+
+GET should be safe and not intended to change server state.
+
+Also, GET parameters are normally sent through the URL/query string, while POST can carry a request body.
+
+21. ASP.NET Core Request Life Cycle
+
+A simplified flow:
+
+Client
+  ↓
+HTTP Request
+  ↓
+Kestrel
+  ↓
+Middleware Pipeline
+  ↓
+Routing
+  ↓
+Authentication
+  ↓
+Authorization
+  ↓
+MVC / Endpoint
+  ↓
+Model Binding
+  ↓
+Validation
+  ↓
+Controller Action
+  ↓
+Service
+  ↓
+Repository / EF Core
+  ↓
+Database
+  ↓
+Response
+  ↓
+Middleware
+  ↓
+Client
+
+Example:
+
+GET /api/products/10
+
+ASP.NET Core:
+
+Receives request
+Runs middleware
+Finds endpoint through routing
+Authenticates user
+Authorizes user
+Binds parameters
+Executes controller action
+Service executes business logic
+EF Core accesses DB
+Result is returned
+Response travels back through middleware
+Client receives response
+22. Explain LINQ and its Methods
+
+LINQ = Language Integrated Query.
+
+It allows us to query collections and data sources using C# syntax.
+
+Example:
+
+var products = products
+    .Where(x => x.Price > 1000)
+    .OrderBy(x => x.Name)
+    .ToList();
+Common LINQ methods
+Filtering
+Where()
+Projection
+Select()
+var names = products.Select(x => x.Name);
+Sorting
+OrderBy()
+OrderByDescending()
+ThenBy()
+ThenByDescending()
+Finding
+First()
+FirstOrDefault()
+Single()
+SingleOrDefault()
+Checking
+Any()
+All()
+Contains()
+Aggregation
+Count()
+Sum()
+Average()
+Min()
+Max()
+Grouping
+GroupBy()
+Joining
+Join()
+Interview Point
+
+LINQ provides a common syntax for querying collections and data sources such as EF Core.
+
+23. Eager vs Lazy vs Explicit Loading
+
+These concepts are mainly discussed with EF Core navigation properties.
+
+Eager Loading
+
+Load related data immediately.
+
+var orders = context.Orders
+    .Include(x => x.Customer)
+    .ToList();
+Order + Customer
+       ↓
+loaded together
+Lazy Loading
+
+Related data is loaded when the navigation property is accessed.
+
+Conceptually:
+
+order.Customer
+
+causes related data to be loaded when needed, if lazy loading is configured.
+
+Risk
+
+Can cause many unexpected database queries, commonly known as the N+1 query problem.
+
+Explicit Loading
+
+You manually tell EF Core to load related data.
+
+context.Entry(order)
+    .Reference(x => x.Customer)
+    .Load();
+Easy Memory Trick
+Eager    → Load now
+Lazy     → Load when accessed
+Explicit → Developer says when to load
+24. ViewData vs ViewBag vs TempData
+
+These are mainly ASP.NET Core MVC concepts.
+
+	ViewData	ViewBag	TempData
+Type	Dictionary	Dynamic wrapper	Dictionary-like
+Same request	Yes	Yes	Yes
+Next request	No	No	Yes
+Type safety	No	No	No
+ViewData
+ViewData["Name"] = "Aman";
+ViewBag
+ViewBag.Name = "Aman";
+TempData
+TempData["Message"] = "Saved successfully";
+
+Useful when redirecting:
+
+Request 1
+   ↓
+TempData
+   ↓
+Redirect
+   ↓
+Request 2
+   ↓
+Read TempData
+25. Session vs Cookies
+Cookie
+
+Stored on the client/browser.
+
+Browser
+  ↓
+Cookie
+
+Example:
+
+UserId=123
+
+Sent with matching requests.
+
+Session
+
+Session data is associated with the user on the server side, with the browser generally holding a session identifier.
+
+Browser
+   ↓
+Session ID
+   ↓
+Server-side session data
+Difference
+Cookie	Session
+Client-side storage	Server-side state
+Limited size	Depends on session store
+Can persist based on expiration	Usually session-oriented
+Sent with requests	Session identified through cookie
+26. readonly vs const vs static
+
+This is a very common C# interview question.
+
+const
+
+Value is a compile-time constant.
+
+const double PI = 3.14;
+
+Cannot change it.
+
+PI = 4; // ❌
+readonly
+
+Can be assigned:
+
+At declaration
+Inside constructor
+class Employee
+{
+    readonly int id;
+
+    public Employee(int id)
+    {
+        this.id = id;
+    }
+}
+static
+
+Belongs to the type/class rather than an individual object.
+
+class Counter
+{
+    public static int Count;
+}
+
+Access:
+
+Counter.Count++;
+Simple memory trick
+const    → fixed compile-time value
+readonly → assigned once per object
+static   → shared at class/type level
+27. SOAP vs REST API
+SOAP	REST
+Protocol	Architectural style
+Usually XML	Usually JSON
+More strict/specification-heavy	Generally simpler
+Uses WSDL and SOAP specifications	Uses HTTP semantics
+More common in legacy/enterprise integrations	Very common for web APIs
+REST Example
+GET /api/products/10
+
+Response:
+
+{
+    "id": 10,
+    "name": "Laptop"
+}
+SOAP
+
+Uses XML messages and SOAP-specific structure.
+
+Interview Answer
+
+SOAP is a protocol with a standardized XML messaging model, while REST is an architectural style that commonly uses HTTP methods and formats such as JSON.
+
+28. What is CORS?
+
+CORS = Cross-Origin Resource Sharing.
+
+It controls whether a browser is allowed to make requests from one origin to another.
+
+Example:
+
+React
+http://localhost:5173
+
+        ↓
+
+ASP.NET Core API
+http://localhost:5000
+
+These are different origins.
+
+The API must allow the frontend origin through CORS configuration.
+
+ASP.NET Core
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("AllowReact",
+        policy =>
+        {
+            policy
+                .WithOrigins("http://localhost:5173")
+                .AllowAnyHeader()
+                .AllowAnyMethod();
+        });
+});
+
+Then:
+
+app.UseCors("AllowReact");
+Important
+
+CORS is primarily a browser security mechanism. It does not mean that your API becomes inaccessible from every non-browser client.
+
+29. String vs StringBuilder
+
+string is immutable.
+
+string name = "Aman";
+
+name += " Upadhyay";
+
+A new string object is created rather than modifying the original string.
+
+For many modifications, StringBuilder is more appropriate.
+
+StringBuilder sb = new StringBuilder();
+
+sb.Append("Aman");
+sb.Append(" Upadhyay");
+
+Console.WriteLine(sb.ToString());
+Difference
+string	StringBuilder
+Immutable	Mutable
+New object for modifications	Modifies internal buffer
+Good for normal text	Good for repeated modifications
+Simple	Better for heavy string manipulation
+30. How does CLR work?
+
+CLR = Common Language Runtime.
+
+It is the runtime environment that executes .NET applications.
+
+For example:
+
+C# Code
+   ↓
+C# Compiler
+   ↓
+IL / Intermediate Language
+   ↓
+CLR
+   ↓
+JIT
+   ↓
+Native Machine Code
+   ↓
+CPU
+
+CLR provides services such as:
+
+Garbage Collection
+Exception handling
+JIT compilation
+Memory management
+Type safety
+Thread management
+Security/runtime services
+JIT
+
+JIT = Just-In-Time compiler.
+
+It converts IL into machine code that can execute on the target platform.
+
+Interview Answer
+
+CLR is the runtime responsible for executing .NET applications and providing services such as garbage collection, exception handling, memory management, and JIT compilation.
+
+31. Explain SOLID Principles
+
+SOLID contains five principles.
+
+S — Single Responsibility Principle
+
+A class should have one primary responsibility and therefore one main reason to change.
+
+Bad:
+
+class Employee
+{
+    void CalculateSalary() {}
+    void SaveToDatabase() {}
+    void SendEmail() {}
+}
+
+Better:
+
+EmployeeService
+SalaryService
+EmployeeRepository
+EmailService
+O — Open/Closed Principle
+
+Open for extension, closed for modification.
+
+You should be able to add new behavior without constantly modifying existing working code.
+
+Example:
+
+interface IPayment
+{
+    void Pay();
+}
+
+Implement:
+
+class CreditCardPayment : IPayment
+{
+    public void Pay() {}
+}
+
+class UpiPayment : IPayment
+{
+    public void Pay() {}
+}
+
+Add another payment type without changing existing implementations.
+
+L — Liskov Substitution Principle
+
+A child class should be usable wherever its parent type is expected without breaking the expected behavior.
+
+Example concept:
+
+Bird
+  ↓
+FlyingBird
+
+Not every bird can necessarily fly, so forcing every Bird to have Fly() can violate LSP.
+
+I — Interface Segregation Principle
+
+Clients should not be forced to depend on methods they don't use.
+
+Bad:
+
+interface IWorker
+{
+    void Work();
+    void Eat();
+    void Sleep();
+}
+
+Better:
+
+interface IWorkable
+{
+    void Work();
+}
+
+interface IEatable
+{
+    void Eat();
+}
+D — Dependency Inversion Principle
+
+High-level modules should depend on abstractions, not concrete implementations.
+
+Bad:
+
+class OrderService
+{
+    private PaymentService _payment = new PaymentService();
+}
+
+Better:
+
+class OrderService
+{
+    private readonly IPaymentService _payment;
+
+    public OrderService(IPaymentService payment)
+    {
+        _payment = payment;
+    }
+}
+SOLID Memory Trick
+S → Single Responsibility
+O → Open/Closed
+L → Liskov Substitution
+I → Interface Segregation
+D → Dependency Inversion
+32. What is API Throttling?
+
+API throttling controls how frequently a client can call an API.
+
+Example:
+
+User → API
+
+100 requests/minute → Allowed
+
+101st request
+     ↓
+429 Too Many Requests
+
+It protects APIs from:
+
+Excessive traffic
+Abuse
+Resource exhaustion
+Accidental request spikes
+Example
+
+Suppose:
+
+100 requests/minute/user
+
+If the user sends 150 requests:
+
+First 100 → Processed
+Remaining → Throttled
+
+HTTP status:
+
+429 Too Many Requests
+Throttling vs Rate Limiting
+
+These terms are often used together, but conceptually:
+
+Rate limiting defines the allowed request rate, while throttling is the act of restricting/slowing requests when that limit is exceeded.
